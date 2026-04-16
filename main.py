@@ -6,25 +6,22 @@ from langchain_core.messages import HumanMessage
 from langchain_openai import ChatOpenAI
 import os
 from langchain_tavily import TavilySearch
-# from tavily import TavilyClient
+from pydantic import BaseModel, Field
+from typing import List
 
-# tavily_client = TavilyClient()
+class Source(BaseModel):
+    """Schema for a source used by the agent"""
 
-# @tool
-# def search(query: str) -> str:
-#     """
-#     Tool the search over the web for the given query
-#     Args:
-#         query: The query to search for
-#     Returns:
-#         The search results
-#     """
-#     print(f"Searching for {query}")
-#     return tavily_client.search(query=query)
+    url:str = Field(description="The url of the source")
+
+class AgentResponse(BaseModel):
+    """Schema for the response of the agent"""
+    answer:str = Field(description="The agent's answer to the question")
+    sources:List[Source] = Field(description="List of sources used to generate the question", default_factory=list)
 
 llm = ChatOpenAI(model="gpt-5-mini", temperature=0)
 tools = [TavilySearch()]
-agent = create_agent(model=llm, tools=tools)
+agent = create_agent(model=llm, tools=tools, response_format=AgentResponse)
 
 def main():
     print(os.getenv("TAVILY_API_KEY"))
