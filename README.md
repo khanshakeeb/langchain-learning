@@ -58,6 +58,90 @@ python ingestion.py
 python main.py
 ```
 
+## How the LCEL Retrieval Chain Works
+
+The core of the LCEL approach is this chain:
+
+```python
+retrieval_chain = (
+    RunnablePassthrough.assign(
+        context=itemgetter("question") | retriever | format_docs
+    )
+    | prompt_template
+    | llm
+    | StrOutputParser()
+)
+```
+
+The `|` operator pipes output from one step as input to the next.
+
+### Component Breakdown
+
+| Component | Role | Input → Output |
+|-----------|------|----------------|
+| `RunnablePassthrough.assign(context=...)` | Passes input dict through unchanged, adds a `context` key | `dict` → `dict` (with `context` added) |
+| `itemgetter("question")` | Extracts the question string from the dict | `dict` → `str` |
+| `retriever` | Similarity search against the vector store | `str` → `list[Document]` |
+| `format_docs` | Joins document contents into a single string | `list[Document]` → `str` |
+| `prompt_template` | Renders `{question}` and `{context}` into a prompt | `dict` → `PromptValue` |
+| `llm` | Generates a response from the prompt | `PromptValue` → `AIMessage` |
+| `StrOutputParser()` | Strips the `AIMessage` wrapper | `AIMessage` → `str` |
+
+### Dry Run Example
+
+**Input:**
+```python
+retrieval_chain.invoke({"question": "What is prompt injection?"})
+```
+
+**Step 1 — `RunnablePassthrough.assign`**
+
+The sub-chain `itemgetter("question") | retriever | format_docs` runs on the input:
+```
+"What is prompt injection?"          # itemgetter("question")
+        ↓
+[Document(page_content="Prompt injection is an attack..."),
+ Document(page_content="Attackers embed malicious instructions...")]  # retriever
+        ↓
+"Prompt injection is an attack...\n\nAttackers embed malicious instructions..."  # format_docs
+```
+
+The result is merged back into the original dict:
+```python
+{
+  "question": "What is prompt injection?",
+  "context": "Prompt injection is an attack...\n\nAttackers embed malicious instructions..."
+}
+```
+
+**Step 2 — `prompt_template`**
+
+Renders the template (e.g. `"Answer using context:\n{context}\n\nQuestion: {question}"`):
+```
+Answer using context:
+Prompt injection is an attack...
+
+Attackers embed malicious instructions...
+
+Question: What is prompt injection?
+```
+
+**Step 3 — `llm`**
+
+Returns an `AIMessage`:
+```python
+AIMessage(content="Prompt injection is a technique where attackers embed instructions...")
+```
+
+**Step 4 — `StrOutputParser`**
+
+Returns a plain string:
+```python
+"Prompt injection is a technique where attackers embed instructions..."
+```
+
+> **Key insight:** The `assign` step is what makes this a retrieval chain — it runs the retriever in parallel with passing through the original input, so both `question` and `context` are available when the prompt template runs.
+
 ## Why LCEL?
 
 The tutorial demonstrates two approaches to building RAG:
