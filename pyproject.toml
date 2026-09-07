@@ -10,6 +10,8 @@ dependencies = [
     "langchain>=1.2.15",
     "langchain-google-genai>=4.2.1",
     "langchain-openai>=1.1.12",
+    "langchain-tavily>=0.2.18",
+    "langgraph>=1.1.6",
     "langsmith>=0.7.30",
     "python-dotenv>=1.2.2",
 ]
