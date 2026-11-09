@@ -10,9 +10,11 @@ class GraphState(TypedDict):
         generation: LLM generation
         web_search: whether to add search
         documents: list of documents
+        generation_count: how many times the generate node has run
     """
 
     question: str
     generation: str
     web_search: bool
     documents: List[str]
+    generation_count: int
