@@ -13,7 +13,8 @@ web_search_tool = TavilySearch(max_results=3)
 def web_search(state: GraphState) -> Dict[str, Any]:
     print("---WEB SEARCH---")
     question = state["question"]
-    documents = state["documents"]
+    # No documents yet when the router sends the question straight here
+    documents = state.get("documents")
 
     # langchain_tavily.TavilySearch returns {"query": ..., "results": [...]}
     tavily_results = web_search_tool.invoke({"query": question})["results"]
